@@ -1,3 +1,8 @@
 @import "@picocss/pico";
 @import "grid.min.css";
 
+/* Custom Styling */
+aside.sidebar,
+main.content{
+    padding: .8rem 1.5rem;
+}
