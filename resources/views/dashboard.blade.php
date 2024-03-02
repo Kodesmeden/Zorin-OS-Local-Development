@@ -38,24 +38,37 @@
                 </nav>
             </aside>
             <main class="content">
-                <button class="contrast" data-target="modal-example" onclick="toggleModal(event)">Launch demo modal</button>
+                <header>
+                    <button data-target="create-application" onclick="toggleModal(event)"><i data-feather="plus"></i> Create App</button>
+                </header>
             </main>
         </div>
 
-        <dialog id="modal-example">
+        <dialog id="create-application" class="pico-modal">
             <article>
-                <header>
-                    <button aria-label="Close" rel="prev" data-target="modal-example" onclick="toggleModal(event)"></button>
-                    <h3>Confirm your action!</h3>
-                </header>
-                <p>
-                    Cras sit amet maximus risus. Pellentesque sodales odio sit amet augue finibus
-                    pellentesque. Nullam finibus risus non semper euismod.
-                </p>
-                <footer>
-                    <button role="button" class="secondary" data-target="modal-example" onclick="toggleModal(event)">Cancel</button>
-                    <button autofocus="" data-target="modal-example" onclick="toggleModal(event)">Confirm</button>
-                </footer>
+                <form action="" method="post">
+                    @csrf
+
+                    <header>
+                        <button aria-label="Close" rel="prev" data-target="create-application" onclick="toggleModal(event)"></button>
+                        <h3>Create Application</h3>
+                    </header>
+
+                    <label for="app-name">Application Name</label>
+                    <input type="text" name="name" id="app-name" required autofocus>
+                    
+                    <label for="app-type">Application Type</label>
+                    <select name="type" id="app-type" class="select2">
+                        <option value="laravel">Laravel</option>
+                        <option value="wordpress">WordPress</option>
+                        <option value="php">PHP</option>
+                    </select>
+
+                    <footer>
+                        <button role="button" class="secondary" data-target="create-application" onclick="toggleModal(event)">Cancel</button>
+                        <button role="button" type="submit">Create</button>
+                    </footer>
+                </form>
             </article>
         </dialog>
 
