@@ -22,7 +22,6 @@ return new class extends Migration
     public function up(): void
     {
         DB::statement("CREATE DATABASE IF NOT EXISTS `{$this->dbName}`");
-        Schema::dropIfExists('personal_access_tokens');
     }
 
     /**
