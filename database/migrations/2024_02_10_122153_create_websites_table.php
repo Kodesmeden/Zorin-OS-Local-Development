@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('websites', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
             $table->string('domain')->unique();
-            $table->string('path');
             $table->string('repo')->nullable();
             $table->enum('type', ['php', 'laravel', 'wordpress'])->index();
             $table->string('php')->default(env('DEFAULT_PHP_VERSION'))->index();

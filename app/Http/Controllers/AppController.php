@@ -3,12 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Http\Base\Controller;
+use App\Logic\AppLogic;
 use Illuminate\Http\Request;
 
 class AppController extends Controller
 {
     public function index() {
-        return view( 'dashboard' );
+        $phpVersions = array_map('basename', glob('/etc/php/*'));
+        return view( 'pages.dashboard', ['phpVersions' => $phpVersions] );
+    }
+
+    public function store(Request $request) {
+        $appLogic = new AppLogic();
+
+        
+        dd($request->input());
+    }
+
+    public function update(Request $request){
+
     }
 
     public function phpinfo() {

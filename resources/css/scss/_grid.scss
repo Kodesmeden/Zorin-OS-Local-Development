@@ -1,0 +1,98 @@
+$item_gap: 1.5rem;
+$total_columns: 6;
+$item_min_width: 440px;
+
+// Media Queries:
+// @media (min-width: 576px) {}
+// @media (min-width: 768px) {}
+// @media (min-width: 1024px) {}
+// @media (min-width: 1280px) {}
+// @media (min-width: 1536px) {}
+
+.grid {
+    margin-bottom: $item_gap;
+
+    @for $columns from 1 through $total_columns {
+        &.grid-#{$columns} {
+            @if $columns > 1 {
+                $gap_count: calc($columns - 1);
+                $total_gap_width: calc($gap_count * $item_gap);
+                $item_max_width: calc((100% - $total_gap_width) / $columns);
+
+                grid-template-columns: repeat(
+                    auto-fill,
+                    minmax(max($item_min_width, $item_max_width), 1fr)
+                ) !important;
+            } @else {
+                grid-template-columns: 1fr !important;
+            }
+
+            grid-gap: $item_gap;
+        }
+    }
+
+    @for $columns from 1 through $total_columns {
+        .column-span-#{$columns} {
+            grid-column: span $columns;
+        }
+    }
+
+    @for $row from 1 through 3 {
+        .row-span-#{$row} {
+            grid-row: span $row;
+        }
+    }
+
+    & > * {
+        margin: 0;
+    }
+}
+
+// Default Pico Container - for extending other elements
+.container {
+    max-width: 100%;
+
+    @media (min-width: 576px) {
+        max-width: 510px;
+        padding-right: 0;
+        padding-left: 0;
+    }
+
+    @media (min-width: 768px) {
+        max-width: 700px;
+    }
+
+    @media (min-width: 1024px) {
+        max-width: 950px;
+    }
+
+    @media (min-width: 1280px) {
+        max-width: 1200px;
+    }
+
+    @media (min-width: 1536px) {
+        max-width: 1450px;
+    }
+}
+
+//* -- Responsive Sidebar/Content styling -- *//
+.grid {
+    &.sidebar-content {
+        grid-template-columns: 3fr 9fr !important;
+        grid-template-areas: "sidebar content" !important;
+        min-height: 100vh;
+        margin-bottom: 0;
+
+        .sidebar {
+            grid-area: sidebar;
+        }
+
+        .content {
+            grid-area: content;
+        }
+
+        @media (min-width: 1536px) {
+            grid-template-columns: 2fr 9fr !important;
+        }
+    }
+}
