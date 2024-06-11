@@ -16,7 +16,10 @@ class AppController extends Controller
     public function store(Request $request) {
         $appLogic = new AppLogic();
 
+        $siteCreated = $appLogic->createApp($request->input('name'), $request->input('type'), $request->input('php_version'), $request->input('repo'));
+
         
+        dd($siteCreated);
         dd($request->input());
     }
 
