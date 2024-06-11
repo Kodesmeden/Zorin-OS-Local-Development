@@ -49,7 +49,7 @@
                 </div>
                 
                 <label for="app-type">PHP Version</label>
-                <select name="type" id="app-type">
+                <select name="php_version" id="app-php-version">
                     @foreach($phpVersions as $version)
                     <option value="{{ $version }}"{{ $version === env('DEFAULT_PHP_VERSION') ? ' selected' : '' }}>{{ $version }}</option>
                     @endforeach

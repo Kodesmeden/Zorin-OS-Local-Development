@@ -40,17 +40,28 @@ class AppLogic
         $callable = "create{$type}App";
         $this->thisPhpVersion = $phpVersion ?? $this->defaultPhpVersion;
 
-        return $this->$callable($name, $repo);
-
-        // Add site config
-        // Add PHP config
-        // Add symbolic link
-        // Restart services
+        try{
+            return $this->$callable($name, $repo);
+        } catch (\Exception $e) {
+            dd($e->getMessage());
+        }
     }
 
     private function createPhpApp($name) {
         $name = $this->getFormattedName($name);
         $domain = $this->getDomainFromName($name);
+
+        try{
+            $this->addSiteConf($domain);
+            $this->addPhpConfig($domain);
+            $this->addSymbolicLink($domain);
+            $this->addWebsiteFolder($domain);
+            $this->restartServices();
+        } catch (\Exception $e) {
+            throw $e;
+        }
+
+        return true;
     }
 
     private function createLaravelApp($name) {
@@ -119,6 +130,8 @@ class AppLogic
         deny all;
     }
 }';
+
+        $this->createSystemFile($path, $content);
     }
 
     private function removeSiteConfig($websiteId, $php) {
@@ -127,17 +140,19 @@ class AppLogic
 
     private function addPhpConfig($domain) {
         $path = "/etc/php/{$this->thisPhpVersion}/fpm/pool.d/{$domain}.conf";
-        $content = '[dev.test]
-user = kodesmeden
-group = kodesmeden
-listen = /run/php/php' . $this->thisPhpVersion . '.sock
-listen.owner = kodesmeden
-listen.group = kodesmeden
+        $content = "[{$domain}]
+user = {$this->webserverUser}
+group = {$this->webserverUser}
+listen = /run/php/php{$this->thisPhpVersion}.sock
+listen.owner = {$this->webserverUser}
+listen.group = {$this->webserverUser}
 pm = dynamic
 pm.max_children = 50
 pm.start_servers = 5
 pm.min_spare_servers = 5
-pm.max_spare_servers = 35';
+pm.max_spare_servers = 35";
+
+        $this->createSystemFile($path, $content);
     }
 
     private function removePhpConfig($websiteId, $php) {
@@ -146,22 +161,66 @@ pm.max_spare_servers = 35';
 
     private function addSymbolicLink($domain) {
         $confPath = "/etc/nginx/sites-available/{$domain}";
+        $symbolicLinkCmd = "ln -s {$confPath} /etc/nginx/sites-enabled/";
 
-        $symbolicLink = "ln -s {$confPath} /etc/nginx/sites-enabled/";
+        return $this->runCommand($symbolicLinkCmd);
     }
 
-    private function removeSymbolicLink($domain) {
-        $confPath = "etc/nginx/sites-enabled/{$domain}";
+    // private function removeSymbolicLink($domain) {
+    //     $confPath = "etc/nginx/sites-enabled/{$domain}";
+    //     $symbolicLinkCmd = "rm {$confPath}";
 
-        $symbolicLink = "rm {$confPath}";
+    //     return $this->runCommand($symbolicLinkCmd);
+    // }
+
+    private function addWebsiteFolder($domain) {
+        $websitePath = "{$this->websitePath}/{$domain}";
+        $createFolderCmd = "mkdir -p {$websitePath}";
+
+        return $this->runCommand($createFolderCmd);
     }
 
     private function restartServices() {
         // TODO: Loop through all PHP versions and add to command
-        $restart = "service php{$this->thisPhpVersion}-fpm restart && service mysql restart && systemctl restart systemd-resolved && systemctl restart nginx && systemctl restart NetworkManager";
+        $restartCmd = "service php{$this->thisPhpVersion}-fpm restart && service mysql restart && systemctl restart systemd-resolved && systemctl restart nginx && systemctl restart NetworkManager";
+
+        return exec($restartCmd);
     }
 
+    private function createSystemFile($path, $content){
+        $error = '';
+        $tempFile = tempnam(sys_get_temp_dir(), 'nginx_site_');
+        file_put_contents($tempFile, $content);
 
+        $command = "echo " . escapeshellarg(env('SUDO_PASSWORD')) . " | sudo -S cp " . escapeshellarg($tempFile) . " " . escapeshellarg($path);
+        exec($command . " 2>&1", $output, $copyErrorCode);
+
+        if ($copyErrorCode === 0) {
+            $command = "echo " . escapeshellarg(env('SUDO_PASSWORD')) . " | sudo -S chmod 644 " . escapeshellarg($path);
+            exec($command . " 2>&1", $output, $chmodErrorCode);
+
+            if ($copyErrorCode !== 0) {
+                $error = "Failed to set permissions. Return code: $chmodErrorCode\n";
+            }
+        } else {
+            $error = "Failed to create file. Return code: $copyErrorCode\n";
+        }
+        
+        unlink($tempFile);
+
+        if (!empty($error)) {
+            throw new \Exception($error);
+        }
+
+        return true;
+    }
+
+    private function runCommand($command) {
+        $command = "echo " . escapeshellarg(env('SUDO_PASSWORD')) . " | sudo -S " . escapeshellarg($command);
+        exec($command . " 2>&1", $output, $errorCode);
+
+        return (bool) empty($errorCode);
+    }
 
     public function updatePhpVersion($websiteId, $newPhpVersion){
         // TODO: Get old PHP version
