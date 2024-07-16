@@ -139,11 +139,12 @@ class AppLogic
     }
 
     private function addPhpConfig($domain) {
+        $name = Str::replace('.test', '', $domain);
         $path = "/etc/php/{$this->thisPhpVersion}/fpm/pool.d/{$domain}.conf";
         $content = "[{$domain}]
 user = {$this->webserverUser}
 group = {$this->webserverUser}
-listen = /run/php/php{$this->thisPhpVersion}.sock
+listen = /run/php/php{$this->thisPhpVersion}-{$name}.sock
 listen.owner = {$this->webserverUser}
 listen.group = {$this->webserverUser}
 pm = dynamic
