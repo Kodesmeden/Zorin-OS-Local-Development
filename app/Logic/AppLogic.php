@@ -2,6 +2,7 @@
 
 namespace App\Logic;
 
+use App\Models\Database;
 use Illuminate\Support\Str;
 
 class AppLogic
@@ -54,6 +55,12 @@ class AppLogic
         $this->appName = $this->getFormattedName($name);
         $this->appDomain = $this->getDomainFromName($this->appName);
 
+        $existingSite = Database::where('domain', $this->appDomain)->first();
+        if ($existingSite) {
+            // TODO: Add notification warning?
+            $this->thisPhpVersion = $existingSite->php;
+        }
+
         $phpSockName = Str::slug($name, '');
         $this->phpSock = "/run/php/php{$this->thisPhpVersion}-{$phpSockName}.sock";
 
@@ -62,8 +69,18 @@ class AppLogic
             $this->addSymbolicLink($this->appDomain);
             $this->addWebsiteFolder($this->appDomain);
             $this->installer->$install("{$this->websitePath}/{$this->appDomain}");
+            $this->database->createDatabase($this->appDomain);
             $this->resetPermissions($this->appDomain);
             $this->updateHostsFile();
+            
+            Database::create([
+                'name' => $this->appName,
+                'domain' => $this->appDomain,
+                'repo' => $repo,
+                'type' => $type,
+                'php' => $this->thisPhpVersion,
+            ]);
+
             $this->restartServices();
             // TODO: Add database creation here
             return $this->$create($repo);
