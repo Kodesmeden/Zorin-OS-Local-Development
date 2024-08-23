@@ -10,7 +10,13 @@ class InstallerLogic
     }
 
     public function installPhp($path) {
-        // TODO: Create simple index.php file
+        $domain = basename($path);
+        $phpFile = $path . '/index.php';
+        $phpContent = "<?php echo '{$domain} works!';";
+        $command = "echo " . escapeshellarg($phpContent) . " | sudo tee " . escapeshellarg($phpFile);
+        exec($command . " > /dev/null 2>&1", $output, $errorCode);
+
+        return (bool) empty($errorCode);
     }
 
     public function installLaravel($path) {

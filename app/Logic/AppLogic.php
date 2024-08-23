@@ -3,6 +3,7 @@
 namespace App\Logic;
 
 use App\Models\Database;
+use App\Models\Website;
 use Illuminate\Support\Str;
 
 class AppLogic
@@ -49,13 +50,12 @@ class AppLogic
 
     public function createApp( $name, $type, $phpVersion = null, $repo = null) {
         $type = ucfirst($type);
-        $create = "create{$type}App";
         $install = "install{$type}";
         $this->thisPhpVersion = $phpVersion ?? $this->defaultPhpVersion;
         $this->appName = $this->getFormattedName($name);
         $this->appDomain = $this->getDomainFromName($this->appName);
 
-        $existingSite = Database::where('domain', $this->appDomain)->first();
+        $existingSite = Website::where('domain', $this->appDomain)->first();
         if ($existingSite) {
             // TODO: Add notification warning?
             $this->thisPhpVersion = $existingSite->php;
@@ -65,6 +65,7 @@ class AppLogic
         $this->phpSock = "/run/php/php{$this->thisPhpVersion}-{$phpSockName}.sock";
 
         try{
+            $this->addSiteConf($this->appDomain);
             $this->addPhpConfig($this->appDomain);
             $this->addSymbolicLink($this->appDomain);
             $this->addWebsiteFolder($this->appDomain);
@@ -73,50 +74,21 @@ class AppLogic
             $this->resetPermissions($this->appDomain);
             $this->updateHostsFile();
             
-            Database::create([
-                'name' => $this->appName,
+            Website::updateOrCreate([
                 'domain' => $this->appDomain,
+            ], [
+                'name' => $this->appName,
                 'repo' => $repo,
                 'type' => $type,
                 'php' => $this->thisPhpVersion,
             ]);
 
-            $this->restartServices();
             // TODO: Add database creation here
-            return $this->$create($repo);
+
+            $this->restartServices();
         } catch (\Exception $e) {
             dd($e->getMessage());
         }
-    }
-
-    private function createPhpApp() {
-        try{
-            $this->addSiteConf($this->appDomain);
-        } catch (\Exception $e) {
-            throw $e;
-        }
-
-        return true;
-    }
-
-    private function createLaravelApp() {
-        try{
-            $this->addSiteConf($this->appDomain, true);
-        } catch (\Exception $e) {
-            throw $e;
-        }
-
-        return true;
-    }
-
-    private function createWordpressApp() {
-        try{
-            $this->addSiteConf($this->appDomain);
-        } catch (\Exception $e) {
-            throw $e;
-        }
-
-        return true;
     }
 
     private function createGitApp($repo)
@@ -228,15 +200,15 @@ pm.max_spare_servers = 35";
     }
 
     private function resetPermissions() {
-        $command = "sudo chown -R {$this->webserverUser}:{$this->webserverGroup} {$this->websitePath}";
-        exec($command . " 2>&1", $output, $copyErrorCode);
+        $command = [
+            "chown -R {$this->webserverUser}:{$this->webserverGroup} {$this->websitePath}",
+            "find {$this->websitePath} -type d -exec chmod 755 {} \;",
+            "find {$this->websitePath} -type f -exec chmod 644 {} \;",
+        ];
+        $errorCode = $this->runCommand($command);
 
-        // Fix general permissions for files and folders
-        exec("sudo find {$this->websitePath} -type d -exec chmod 755 {} \; > /dev/null 2>&1 &");
-        exec("sudo find {$this->websitePath} -type f -exec chmod 644 {} \; > /dev/null 2>&1 &");
-
-        if ($copyErrorCode !== 0) {
-            throw new \Exception("Failed to set permissions. Return code: $copyErrorCode\n");
+        if (!empty($errorCode)) {
+            throw new \Exception("Failed to set permissions. Return code: $errorCode\n");
         }
 
         return true;
@@ -266,13 +238,20 @@ pm.max_spare_servers = 35";
     }
 
     public function restartServices() {
-        // TODO: Loop through all PHP versions and add to command
-        // systemctl restart systemd-resolved && chown -R www-data:www-data /usr/share/phpmyadmin && chown -R kodesmeden:www-data /var/www && find /var/www -type d -exec chmod 755 {} \; && find /var/www -type f -exec chmod 644 {} \; && find /var/www -type d -exec chmod 2755 {} +
-        // $restartCmd = "sudo service php{$this->thisPhpVersion}-fpm restart && sudo service mysql restart && sudo systemctl restart systemd-resolved && sudo systemctl restart nginx && sudo systemctl restart NetworkManager";
-        // $restartCmd = "sudo service php{$this->thisPhpVersion}-fpm restart && sudo service mysql restart && sudo systemctl restart systemd-resolved && sudo systemctl restart nginx";
-        $restartCmd = "sudo systemctl reload php{$this->thisPhpVersion}-fpm && sudo systemctl reload systemd-resolved && sudo systemctl reload nginx";
+        $restartCmd = [
+            "systemctl reload php{$this->thisPhpVersion}-fpm",
+        ];
 
-        return exec($restartCmd);
+        foreach($this->phpVersions as $version) {
+            if ($version !== $this->thisPhpVersion) {
+                $restartCmd[] = "systemctl reload php{$version}-fpm";
+            }
+        }
+
+        $restartCmd[] = "systemctl reload systemd-resolved";
+        $restartCmd[] = "systemctl reload nginx";
+
+        return $this->runCommand($restartCmd);
     }
 
     private function createSystemFile($path, $content){
@@ -280,18 +259,18 @@ pm.max_spare_servers = 35";
         $tempFile = tempnam(sys_get_temp_dir(), 'nginx_site_');
         file_put_contents($tempFile, $content);
 
-        $command = "sudo cp " . escapeshellarg($tempFile) . " " . escapeshellarg($path);
-        exec($command . " 2>&1", $output, $copyErrorCode);
+        $command = "cp " . escapeshellarg($tempFile) . " " . escapeshellarg($path);
+        $copyErrorCode = $this->runCommand($command);
 
         if ($copyErrorCode === 0) {
-            $command = "sudo chmod 644 " . escapeshellarg($path);
-            exec($command . " 2>&1", $output, $chmodErrorCode);
+            $command = "chmod 644 " . escapeshellarg($path);
+            $chmodErrorCode = $this->runCommand($command);
 
             if ($chmodErrorCode !== 0) {
-                $error = "Failed to set permissions. Return code: $chmodErrorCode\n";
+                $error = "Failed to set permissions. Return code: $chmodErrorCode";
             }
         } else {
-            $error = "Failed to create file. Return code: $copyErrorCode\n";
+            $error = "Failed to create file ({$path}). Return code: {$copyErrorCode}. Command: {$command}";
         }
         
         unlink($tempFile);
@@ -304,10 +283,14 @@ pm.max_spare_servers = 35";
     }
 
     private function runCommand($command) {
+        if (is_array($command)) {
+            $command = implode(' && sudo ', $command);
+        }
         $command = "sudo " . $command;
+
         exec($command . " 2>&1", $output, $errorCode);
 
-        return (bool) empty($errorCode);
+        return $errorCode;
     }
 
     public function updatePhpVersion($websiteId, $newPhpVersion){
