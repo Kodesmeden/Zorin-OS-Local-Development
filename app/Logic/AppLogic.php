@@ -34,14 +34,10 @@ class AppLogic
         $this->webserverGroup = env('WEBSERVER_GROUP');
         $this->database = $databaseLogic;
         $this->installer = $installerLogic;
-
-        // TODO: Add support for databaseLogic
-        // TODO: Add support for installerLogic
-        // TODO: Add support for website ID + set website info
     }
 
     private function getFormattedName($name) {
-        return Str::headline($name);
+        return Str::squish($name);
     }
 
     private function getDomainFromName($name) {
@@ -69,7 +65,7 @@ class AppLogic
             $this->addPhpConfig($this->appDomain);
             $this->addSymbolicLink($this->appDomain);
             $this->addWebsiteFolder($this->appDomain);
-            $this->installer->$install("{$this->websitePath}/{$this->appDomain}");
+            $this->installer->$install("{$this->websitePath}/{$this->appDomain}", $repo);
             $this->database->createDatabase($this->appDomain);
             $this->resetPermissions($this->appDomain);
             $this->updateHostsFile();
@@ -83,36 +79,12 @@ class AppLogic
                 'php' => $this->thisPhpVersion,
             ]);
 
-            // TODO: Add database creation here
-
             $this->restartServices();
         } catch (\Exception $e) {
             dd($e->getMessage());
         }
-    }
 
-    private function createGitApp($repo)
-    {
-        if (substr($repo, -4) !== '.git') {
-            return false;
-        }
-
-        if (strpos($repo, 'https://') === false) {
-            if (strpos($repo, 'git@') === false) {
-                return false;
-            }
-
-            $repo = str_replace([':', 'git@'], ['/', 'https://'], $repo);
-        }
-
-        $gitUser = env('GIT_USERNAME');
-        $gitPass = env('GIT_TOKEN');
-
-        $gitUrl = str_replace('https://', "https://$gitUser:$gitPass@", $repo);
-
-        exec("cd {$this->websitePath}/ && git clone {$gitUrl} {$this->appDomain} 2>&1", $output, $errorCode);
-
-        return (bool) empty($errorCode);
+        return true;
     }
 
     private function addSiteConf($domain, $laravel = false) {
@@ -239,17 +211,9 @@ pm.max_spare_servers = 35";
 
     public function restartServices() {
         $restartCmd = [
-            "systemctl reload php{$this->thisPhpVersion}-fpm",
+            "systemctl reload systemd-resolved",
+            "systemctl reload nginx",
         ];
-
-        foreach($this->phpVersions as $version) {
-            if ($version !== $this->thisPhpVersion) {
-                $restartCmd[] = "systemctl reload php{$version}-fpm";
-            }
-        }
-
-        $restartCmd[] = "systemctl reload systemd-resolved";
-        $restartCmd[] = "systemctl reload nginx";
 
         return $this->runCommand($restartCmd);
     }
