@@ -2,5 +2,18 @@
     .sidebar {
         background: var(--kodesmeden-card-sectioning-background-color);
         box-shadow: var(--kodesmeden-card-box-shadow);
+        padding: .5rem;
+
+        ul{
+            li{
+                a{
+                    padding-left: 1rem;
+                }
+            }
+        }
+    }
+
+    .content{
+        padding: .5rem;
     }
 }

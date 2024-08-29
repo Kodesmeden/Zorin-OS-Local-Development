@@ -397,7 +397,7 @@ cp .env.example .env
 composer update
 php artisan key:generate
 php artisan migrate --force
-npm install vite
+npm install -g vite
 npm run build
 ```
 

@@ -39,8 +39,16 @@
             </aside>
             <main class="content">
                 <header>
-                    <button data-target="create-application" data-toggle="modal"><i data-feather="plus"></i> Create App</button>
+                    <h1>@yield('page_title')</h1>
                 </header>
+
+                @if( session('success') )
+                    <article class="alert alert-success">{{ session('success') }}</article>
+                @endif
+
+                @if( session('error') )
+                    <article class="alert alert-error">{{ session('error') }}</article>
+                @endif
 
                 @yield('content')
             </main>

@@ -6,26 +6,57 @@ use App\Http\Base\Controller;
 use App\Logic\AppLogic;
 use App\Logic\DatabaseLogic;
 use App\Logic\InstallerLogic;
+use App\Models\Website;
 use Illuminate\Http\Request;
 
 class AppController extends Controller
 {
+    protected $appLogic;
+
+    public function __construct()
+    {
+        $this->appLogic = new AppLogic(new DatabaseLogic, new InstallerLogic);
+    }
+
     public function index() {
         $phpVersions = array_map('basename', glob('/etc/php/*'));
-        return view( 'pages.dashboard', ['phpVersions' => $phpVersions] );
+        $applications = Website::all();
+        return view( 'pages.dashboard', ['phpVersions' => $phpVersions, 'applications' => $applications] );
     }
 
     public function store(Request $request) {
-        $appLogic = new AppLogic(new DatabaseLogic, new InstallerLogic);
+        $siteCreated = $this->appLogic->createApp($request->input('name'), $request->input('type'), $request->input('php_version'), $request->input('repo'));
 
-        $siteCreated = $appLogic->createApp($request->input('name'), $request->input('type'), $request->input('php_version'), $request->input('repo'));
+        if ($siteCreated) {
+            return redirect()->route('dashboard')->with('success', 'Site created successfully');
+        } else {
+            return redirect()->route('dashboard')->with('error', 'Site creation failed');
+        }
         
-        dd($siteCreated);
-        dd($request->input());
+        // dd($siteCreated);
+        // dd($request->input());
     }
 
-    public function update(Request $request){
+    public function changePhpVersion(Request $request){
+        if ( ! $request->has('website_id') || ! $request->has('old_php_version') || ! $request->has('new_php_version') ) {
+            return redirect()->route('dashboard')->with('error', 'Invalid request...');
+        }
 
+        if ( $request->input('old_php_version') === $request->input('new_php_version') ) {
+            return redirect()->route('dashboard')->with('error', 'No changes made...');
+        }
+
+        $websiteId = $request->input('website_id');
+        $oldPhpVersion = $request->input('old_php_version');
+        $newPhpVersion = $request->input('new_php_version');
+
+        try{
+            $this->appLogic->updatePhpVersion($websiteId, $oldPhpVersion, $newPhpVersion);
+        } catch (\Exception $e) {
+            return redirect()->route('dashboard')->with('error', 'Failed to change PHP version');
+        }
+
+        return redirect()->route('dashboard')->with('success', 'PHP version changed successfully');
     }
 
     public function phpinfo() {

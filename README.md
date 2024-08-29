@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-<a href="SETUP.md">Local Development Setup Guide</a>
+<a href="SETUP.md" style="font-weight: 600">Local Development Setup Guide</a>
 </p>
 
 ## About Laravel

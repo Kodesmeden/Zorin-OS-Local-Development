@@ -88,8 +88,8 @@ class AppLogic
     }
 
     private function addSiteConf($domain, $laravel = false) {
-        $path = "/etc/nginx/sites-available/{$domain}";
-        $root = $laravel ? "/var/www/resources/websites/{$domain}/public" : "/var/www/resources/websites/{$domain}";
+        $path = "{$this->sitesAvailable}/{$domain}";
+        $root = $laravel ? "{$this->websitePath}/{$domain}/public" : "{$this->websitePath}/{$domain}";
 
         $content = 'server {
     listen 80;
@@ -123,8 +123,8 @@ class AppLogic
     }
 
     private function removeSiteConfig($websiteId) {
-        // $path = "/etc/nginx/sites-available/{$domain}";
-        // $path = "/etc/nginx/sites-enabled/{$domain}";
+        // $path = "{$this->sitesAvailable}/{$domain}";
+        // $path = "{$this->sitesEnabled}/{$domain}";
     }
 
     private function addPhpConfig($domain) {
@@ -150,8 +150,8 @@ pm.max_spare_servers = 35";
     }
 
     private function addSymbolicLink($domain) {
-        $confPath = escapeshellarg("/etc/nginx/sites-available/{$domain}");
-        $symbolicLinkCmd = "ln -s {$confPath} /etc/nginx/sites-enabled/";
+        $confPath = escapeshellarg("{$this->sitesAvailable}/{$domain}");
+        $symbolicLinkCmd = "ln -s {$confPath} {$this->sitesEnabled}/";
 
         return $this->runCommand($symbolicLinkCmd);
     }
@@ -212,7 +212,7 @@ pm.max_spare_servers = 35";
     public function restartServices() {
         $restartCmd = [
             "systemctl reload systemd-resolved",
-            "systemctl reload nginx",
+            "systemctl restart nginx",
         ];
 
         return $this->runCommand($restartCmd);
@@ -257,7 +257,31 @@ pm.max_spare_servers = 35";
         return $errorCode;
     }
 
-    public function updatePhpVersion($websiteId, $newPhpVersion){
-        // TODO: Get old PHP version
+    public function updatePhpVersion($websiteId, $oldPhpVersion, $newPhpVersion){
+        $website = Website::find($websiteId);
+
+        if (!$website) {
+            return false;
+        }
+
+        $domain = $website->domain;
+        $commands = [];
+
+        $commands[] = "sed -i 's/php{$oldPhpVersion}-fpm.sock/php{$newPhpVersion}-fpm.sock/' {$this->sitesAvailable}/{$domain}";
+        $commands[] = "mv /etc/php/{$oldPhpVersion}/fpm/pool.d/{$domain}.conf /etc/php/{$newPhpVersion}/fpm/pool.d/{$domain}.conf";
+        $commands[] = "sed -i 's/php{$oldPhpVersion}-fpm.sock/php{$newPhpVersion}-fpm.sock/' /etc/php/{$newPhpVersion}/fpm/pool.d/{$domain}.conf";
+
+        $errorCode = $this->runCommand($commands);
+
+        if ($errorCode !== 0) {
+            throw new \Exception("Failed to update PHP version. Return code: $errorCode\n");
+        }
+
+        $website->php = $newPhpVersion;
+        $website->save();
+
+        $this->restartServices();
+
+        return true;
     }
 }

@@ -39,3 +39,48 @@
         display: none;
     }
 }
+
+.alert{
+    margin: 2rem 0;
+    border: 1px solid;
+
+    &.alert-info{
+        border-color: var(--kodesmeden-info);
+        color: white;
+    }
+
+    &.alert-success{
+        border-color: var(--kodesmeden-success);
+        color: white;
+    }
+
+    &.alert-warning{
+        border-color: var(--kodesmeden-warning);
+        color: black;
+    }
+
+    &.alert-error{
+        border-color: var(--kodesmeden-error);
+        color: white;
+    }
+
+    &.alert-dark{
+        border-color: var(--kodesmeden-success-dark);
+        color: white;
+    }
+
+    &.alert-light{
+        border-color: white;
+        color: black;
+    }
+
+    &.alert-primary{
+        border-color: var(--kodesmeden-info);
+        color: white;
+    }
+
+    &.alert-secondary{
+        border-color: var(--kodesmeden-success);
+        color: white;
+    }
+}
