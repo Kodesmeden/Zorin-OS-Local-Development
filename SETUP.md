@@ -1,5 +1,6 @@
 
-# Ubuntu Local Development Guide
+# Ubuntu Local Development Setup Guide
+I guiden her er brugeren `kodesmeden` brugt, husk at udskifte `kodesmeden` med dit eget brugernavn.
 
 ## Forberedelser
 
@@ -271,10 +272,11 @@ Indsæt følgende:
 if [ -f "$HOME/.bash_profile" ]; then
     source "$HOME/.bash_profile"
 fi
-```
-Ændr umask og ssh tilladelser:
-```bash
+
 umask 002
+```
+Ændr ssh tilladelser:
+```bash
 chmod -R 0600 /home/kodesmeden/.ssh/*
 ```
 
@@ -363,8 +365,8 @@ systemctl restart NetworkManager
 composer self-update
 npm install -g npm@latest
 apt update
-apt -y upgrade
-apt -y auto-remove
+apt upgrade -y
+apt autoremove -y
 ```
 
 ## Rettelse af tilladelser
@@ -414,3 +416,5 @@ Icon=utilities-terminal
 Terminal=false
 Type=Application
 ```
+
+Højreklik på genvejen og tillad kørsel.
