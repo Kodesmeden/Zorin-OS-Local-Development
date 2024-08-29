@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Base\Controller;
 use App\Logic\AppLogic;
+use App\Logic\DatabaseLogic;
+use App\Logic\InstallerLogic;
 use Illuminate\Http\Request;
 
 class AppController extends Controller
@@ -14,7 +16,7 @@ class AppController extends Controller
     }
 
     public function store(Request $request) {
-        $appLogic = new AppLogic();
+        $appLogic = new AppLogic(new DatabaseLogic, new InstallerLogic);
 
         $siteCreated = $appLogic->createApp($request->input('name'), $request->input('type'), $request->input('php_version'), $request->input('repo'));
         
