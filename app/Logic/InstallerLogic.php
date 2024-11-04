@@ -58,7 +58,7 @@ class InstallerLogic
 
     public function installPhp($path) {
         $domain = basename($path);
-        $phpFile = $path . '/index.php';
+        $phpFile = $path . '/public/index.php';
         $phpContent = "<?php echo '{$domain} works!';";
         $command = "echo " . escapeshellarg($phpContent) . " | sudo tee " . escapeshellarg($phpFile);
         exec($command . " > /dev/null 2>&1", $output, $errorCode);
@@ -79,11 +79,11 @@ class InstallerLogic
         $websitesPath = Str::replaceLast("/{$domain}", '', $path);
 
         try {
+            $path .= '/public';
             copy( 'https://da.wordpress.org/latest-da_DK.tar.gz', $websitesPath . '/wordpress.tar.gz' );
             $phar = new \PharData( $websitesPath . '/wordpress.tar.gz' );
             $phar->extractTo( $websitesPath );
-            rmdir($path);
-            rename($websitesPath . '/wordpress', $path);
+            rename("{$websitesPath}/wordpress", $path);
 
             $pluginDir = $path . '/wp-content/plugins';
             $wpConfigSample = $path . '/wp-config-sample.php';

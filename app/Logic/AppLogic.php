@@ -87,9 +87,9 @@ class AppLogic
         return true;
     }
 
-    private function addSiteConf($domain, $laravel = false) {
+    private function addSiteConf($domain) {
         $path = "{$this->sitesAvailable}/{$domain}";
-        $root = $laravel ? "{$this->websitePath}/{$domain}/public" : "{$this->websitePath}/{$domain}";
+        $root = "{$this->websitePath}/{$domain}/public";
 
         $content = 'server {
     listen 80;
@@ -99,7 +99,7 @@ class AppLogic
     index index.php;
 
     location / {
-        try_files $uri $uri/ =404;
+        try_files $uri $uri/ /index.php?$query_string;
     }
 
     location ~ \.php$ {
@@ -107,6 +107,7 @@ class AppLogic
         fastcgi_pass unix:/run/php/php' . $this->thisPhpVersion . '-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
+        fastcgi_read_timeout 600;
     }
 
     location ~* ^/(robots\.txt|favicon\.ico)$ {
@@ -164,7 +165,7 @@ pm.max_spare_servers = 35";
     // }
 
     private function addWebsiteFolder($domain) {
-        $websitePath = escapeshellarg("{$this->websitePath}/{$domain}");
+        $websitePath = escapeshellarg("{$this->websitePath}/{$domain}/public");
         $createFolderCmd = "mkdir -p {$websitePath}";
 
         // return $createFolderCmd;
