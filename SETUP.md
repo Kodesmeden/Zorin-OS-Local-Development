@@ -213,7 +213,7 @@ server {
     index index.php;
 
     location / {
-        try_files $uri $uri/ =404;
+        try_files $uri $uri/ /index.php?$query_string;
     }
 
     location ~ \.php$ {
@@ -221,6 +221,7 @@ server {
         fastcgi_pass unix:/run/php/php8.2-fpm.sock;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
+        fastcgi_read_timeout 600;
     }
 
     location ~* ^/(robots\.txt|favicon\.ico)$ {
