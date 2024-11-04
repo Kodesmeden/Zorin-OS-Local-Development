@@ -213,7 +213,8 @@ pm.max_spare_servers = 35";
     public function restartServices() {
         $restartCmd = [
             "systemctl reload systemd-resolved",
-            "systemctl restart nginx",
+            "systemctl reload nginx",
+            "systemctl reload php{$this->thisPhpVersion}-fpm",
         ];
 
         return $this->runCommand($restartCmd);
